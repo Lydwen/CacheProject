@@ -2,7 +2,6 @@
 
 #include "strategy.h"
 #include "low_cache.h"
-#include "random.h"
 #include "time.h"
 
 /*
@@ -19,9 +18,9 @@ void *Strategy_Create(struct Cache *pcache)
 
 
 
- }
+}
 
-/void Strategy_Close(struct Cache *pcache)
+void Strategy_Close(struct Cache *pcache)
 {
 }
 
@@ -33,10 +32,18 @@ void Strategy_Invalidate(struct Cache *pcache)
 
 struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache) 
 {
-
-
-// Get_Free_Block, sinon strat
-
+	struct Cache_Block_Header *pbh;
+    /* On cherche d'abord un bloc invalide */
+    if ((pbh = Get_Free_Block(pcache)) != NULL)
+    {
+		/*On le rajoute à la fin de la queue*/
+		Cache_List_Append(&((struct Cache_List)(pcache->pstrategy)),&pbh);	
+		return pbh;
+	}
+	pbh = Cache_List_Remove_First(&((struct Cache_List)(pcache->pstrategy)));
+	Cache_List_Append(&((struct Cache_List)(pcache->pstrategy)),&pbh);
+	
+	return pbh;
 }
 
 
