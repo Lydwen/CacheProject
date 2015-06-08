@@ -4,6 +4,7 @@
 #include "low_cache.h"
 #include "random.h"
 #include "time.h"
+#include "cache_list.h"
 
 /*
 Liste pointeur sur blocs valides
@@ -15,11 +16,11 @@ affectation a un autre bloc : on le met en queue
 
 void *Strategy_Create(struct Cache *pcache) 
 {
- //initialisation liste + free a la fin
-
-
-
- }
+	//initialisation liste + free a la fin
+	struct Cache_List cache_list = Cache_List_Create();
+	pcache->pstrategy = cache_list;
+	
+}
 
 /void Strategy_Close(struct Cache *pcache)
 {
