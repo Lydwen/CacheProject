@@ -15,7 +15,10 @@ affectation a un autre bloc : on le met en queue
 
 void *Strategy_Create(struct Cache *pcache) 
 {
- 
+ //initialisation liste + free a la fin
+
+
+
  }
 
 /void Strategy_Close(struct Cache *pcache)
@@ -28,6 +31,10 @@ void Strategy_Invalidate(struct Cache *pcache)
 
 struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache) 
 {
+
+
+// Get_Free_Block, sinon strat
+
 }
 
 
