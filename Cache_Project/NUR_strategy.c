@@ -5,7 +5,14 @@
 #include "random.h"
 #include "time.h"
 
-/
+/*
+	Remplacer le bloc qui a le plus petit 2*R+M 
+	R a 1 des que bloc référencé (lecture/ecriture)
+	remis à 0 regulièrement (nderef UT)
+	
+
+*/
+
 void *Strategy_Create(struct Cache *pcache) 
 {
  

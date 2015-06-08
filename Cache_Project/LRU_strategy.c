@@ -5,7 +5,14 @@
 #include "random.h"
 #include "time.h"
 
-/
+
+/*
+liste pointeurs blocs libres
+mise en queue de liste :
+	chaque fois qu'un bloc change d'affectation
+	operation lecture ecriture
+*/
+
 void *Strategy_Create(struct Cache *pcache) 
 {
  

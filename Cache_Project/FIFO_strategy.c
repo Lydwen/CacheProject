@@ -5,7 +5,14 @@
 #include "random.h"
 #include "time.h"
 
-/
+/*
+Liste pointeur sur blocs valides
+Des que bloc non valide devient valide on le met en queue
+affectation a un autre bloc : on le met en queue
+
+*/
+
+
 void *Strategy_Create(struct Cache *pcache) 
 {
  
@@ -36,3 +43,4 @@ char *Strategy_Name()
 {
     return "FIFO";
 }
+
