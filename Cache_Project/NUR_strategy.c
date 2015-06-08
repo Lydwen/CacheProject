@@ -26,6 +26,8 @@ void *Strategy_Create(struct Cache *pcache)
 
 void Strategy_Invalidate(struct Cache *pcache)
 {
+
+	//mettre les R a 0
 }
 
 struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache) 

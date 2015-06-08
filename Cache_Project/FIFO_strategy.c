@@ -27,6 +27,8 @@ void *Strategy_Create(struct Cache *pcache)
 
 void Strategy_Invalidate(struct Cache *pcache)
 {
+
+    
 }
 
 struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache) 
