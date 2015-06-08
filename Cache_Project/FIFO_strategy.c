@@ -15,13 +15,16 @@ affectation a un autre bloc : on le met en queue
 
 void *Strategy_Create(struct Cache *pcache) 
 {
-	//initialisation liste + free a la fin
-	struct Cache_List cache_list = Cache_List_Create();
+	//initialisation liste
+	struct Cache_List *cache_list = Cache_List_Create();
 	pcache->pstrategy = cache_list;
+
+	return NULL;	
 }
 
 void Strategy_Close(struct Cache *pcache)
 {
+	Cache_List_Delete(pcache->pstrategy);
 }
 
 void Strategy_Invalidate(struct Cache *pcache)
