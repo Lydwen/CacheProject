@@ -37,11 +37,13 @@ struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache)
     if ((pbh = Get_Free_Block(pcache)) != NULL)
     {
 		/*On le rajoute à la fin de la queue*/
-		Cache_List_Append(&((struct Cache_List)(pcache->pstrategy)),&pbh);	
+		Cache_List_Append(((struct Cache_List *)(pcache->pstrategy)),pbh);	
 		return pbh;
 	}
-	pbh = Cache_List_Remove_First(&((struct Cache_List)(pcache->pstrategy)));
-	Cache_List_Append(&((struct Cache_List)(pcache->pstrategy)),&pbh);
+	/*on enlève le premier bloc et on récupère son adresse*/
+	pbh = Cache_List_Remove_First(((struct Cache_List *)(pcache->pstrategy)));
+	/*rajoute le bloc à la fin de la queue*/
+	Cache_List_Append(((struct Cache_List *)(pcache->pstrategy)),pbh);
 	
 	return pbh;
 }
