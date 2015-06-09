@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "cache_list.h"
+#include "low_cache.h"
 
 /*! Création d'une liste de blocs */
 struct Cache_List *Cache_List_Create()
@@ -21,19 +22,42 @@ void Cache_List_Delete(struct Cache_List *list)
 /*! Insertion d'un élément à la fin */
 void Cache_List_Append(struct Cache_List *list, struct Cache_Block_Header *pbh)
 {
-	
+	struct Cache_List  *pcurr;
+    struct Cache_List  *pnew;
+
+    pnew = malloc(sizeof(struct Cache_List));
+    pnew->pheader = pbh;
+
+    for (pcurr = list->next; pcurr != list ;  pcurr = pcurr->next)
+    { }
+
+    // On insère après pcurr
+    pnew->prev = pcurr->prev;
+    pcurr->prev->next = pnew;
+    pcurr->prev = pnew;
+    pnew->next = pcurr;
 }
 
 /*! Insertion d'un élément au début*/
 void Cache_List_Prepend(struct Cache_List *list, struct Cache_Block_Header *pbh)
 {
-	
+	struct Cache_List  *pcurr = list->next;
+    struct Cache_List  *pnew;
+
+    pnew = malloc(sizeof(struct Cache_List));
+    pnew->pheader = pbh;
+
+    // On insère avant pcurr
+    pnew->prev = list;
+    pcurr->prev->next = pnew;
+    pcurr->prev = pnew;
+    pnew->next = pcurr;
 }
 
 /*! Retrait du premier élément */
 struct Cache_Block_Header *Cache_List_Remove_First(struct Cache_List *list)
 {
-	
+	return list->next->pheader;
 }
 
 /*! Retrait du dernier élément */
@@ -89,5 +113,23 @@ int main()
 	printf("cachelist address : %p Prev : %p Next : %p \n", cachelist, cachelist->prev, cachelist->next);
 	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
 	printAllBlockInList(cachelist);
+	
+	struct Cache_Block_Header *pbh1 = malloc(sizeof(struct Cache_Block_Header));
+	struct Cache_Block_Header *pbh2 = malloc(sizeof(struct Cache_Block_Header));
+	struct Cache_Block_Header *pbh3 = malloc(sizeof(struct Cache_Block_Header));
+
+	
+	Cache_List_Append(cachelist,pbh1);
+	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
+	printAllBlockInList(cachelist);
+	
+	Cache_List_Append(cachelist,pbh2);
+	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
+	printAllBlockInList(cachelist);
+	
+	Cache_List_Prepend(cachelist,pbh3);
+	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
+	printAllBlockInList(cachelist);
+	
 	
 }
