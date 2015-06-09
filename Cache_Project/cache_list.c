@@ -29,20 +29,17 @@ void Cache_List_Delete(struct Cache_List *list)
 /*! Insertion d'un élément à la fin */
 void Cache_List_Append(struct Cache_List *list, struct Cache_Block_Header *pbh)
 {
-	struct Cache_List  *pcurr;
+	struct Cache_List  *plast = list->prev;
     struct Cache_List  *pnew;
 
     pnew = malloc(sizeof(struct Cache_List));
     pnew->pheader = pbh;
 
-    for (pcurr = list->next; pcurr != list ;  pcurr = pcurr->next)
-    { }
-
-    // On insère après pcurr
-    pnew->prev = pcurr->prev;
-    pcurr->prev->next = pnew;
-    pcurr->prev = pnew;
-    pnew->next = pcurr;
+    // On insère après plast
+    pnew->prev = plast;
+    plast->next = pnew;
+    pnew->next = list;
+    list->prev = pnew;
 }
 
 /*! Insertion d'un élément au début*/
@@ -139,73 +136,3 @@ void printAllBlockInList(const struct Cache_List *cachelist)
         printf("%p ", cacheCurrent->pheader);
     printf(")\n");
 }
-/*
-int main()
-{
-	printf("Testing cache_list\n");
-	printf("Let's create a new empty cache list\n");
-	struct Cache_List *cachelist = Cache_List_Create();
-	printf("cachelist address : %p Prev : %p Next : %p \n", cachelist, cachelist->prev, cachelist->next);
-	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
-	printAllBlockInList(cachelist);
-	
-	struct Cache_Block_Header *pbh1 = malloc(sizeof(struct Cache_Block_Header));
-	struct Cache_Block_Header *pbh2 = malloc(sizeof(struct Cache_Block_Header));
-	struct Cache_Block_Header *pbh3 = malloc(sizeof(struct Cache_Block_Header));
-	
-	printf("===Append %p===\n", pbh1);
-	Cache_List_Append(cachelist,pbh1);
-	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
-	printAllBlockInList(cachelist);
-	
-	printf("===Append %p===\n", pbh2);
-	Cache_List_Append(cachelist,pbh2);
-	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
-	printAllBlockInList(cachelist);
-	
-	printf("===Prepend %p===\n", pbh3);
-	Cache_List_Prepend(cachelist,pbh3);
-	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
-	printAllBlockInList(cachelist);
-	
-	printf("===Take out first header===\n");
-	printf("First header : %p\n", Cache_List_Remove_First(cachelist));
-	printAllBlockInList(cachelist);
-	
-	printf("===Take out last header===\n");
-	printf("Last header : %p\n", Cache_List_Remove_Last(cachelist));
-	printAllBlockInList(cachelist);
-	
-	printf("===Clear cachelist===\n");
-	Cache_List_Clear(cachelist);
-	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
-	printAllBlockInList(cachelist);
-	
-	printf("===Add some elements again===\n");
-	Cache_List_Append(cachelist,pbh1);
-	Cache_List_Append(cachelist,pbh2);
-	Cache_List_Append(cachelist,pbh3);
-	printAllBlockInList(cachelist);
-	printf("===Clear cachelist===\n");
-	Cache_List_Clear(cachelist);
-	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
-	printAllBlockInList(cachelist);
-	
-	printf("===Add some elements again===\n");
-	Cache_List_Append(cachelist,pbh1);
-	Cache_List_Append(cachelist,pbh2);
-	Cache_List_Append(cachelist,pbh3);
-	printAllBlockInList(cachelist);
-	
-	printf("===Putting second element to last===\n");
-	Cache_List_Move_To_End(cachelist, pbh2);
-	printAllBlockInList(cachelist);
-	
-	printf("===Putting last element to first===\n");
-	Cache_List_Move_To_Begin(cachelist, pbh2);
-	printAllBlockInList(cachelist);
-	
-	printf("===Finished test. Clearing memory..===\n");
-	Cache_List_Delete(cachelist);
-	free(pbh1);free(pbh2);free(pbh3);
-}*/
