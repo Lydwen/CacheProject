@@ -139,7 +139,7 @@ void printAllBlockInList(const struct Cache_List *cachelist)
         printf("%p ", cacheCurrent->pheader);
     printf(")\n");
 }
-
+/*
 int main()
 {
 	printf("Testing cache_list\n");
@@ -208,4 +208,4 @@ int main()
 	printf("===Finished test. Clearing memory..===\n");
 	Cache_List_Delete(cachelist);
 	free(pbh1);free(pbh2);free(pbh3);
-}
+}*/
