@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "cache_list.h"
 
 /*! Création d'une liste de blocs */
@@ -71,6 +72,15 @@ void Cache_List_Move_To_Begin(struct Cache_List *list, struct Cache_Block_Header
 	
 }
 
+void printAllBlockInList(const struct Cache_List *cachelist)
+{
+	assert(cachelist != NULL);
+    printf("( ");
+    for (struct Cache_List *cacheCurrent = cachelist->next; cacheCurrent != cachelist; cacheCurrent = cacheCurrent->next)
+        printf("%p ", cacheCurrent->pheader);
+    printf(")\n");
+}
+
 int main()
 {
 	printf("Testing cache_list\n");
@@ -78,5 +88,6 @@ int main()
 	struct Cache_List *cachelist = Cache_List_Create();
 	printf("cachelist address : %p Prev : %p Next : %p \n", cachelist, cachelist->prev, cachelist->next);
 	printf("cachelist empty ? %s \n", Cache_List_Is_Empty(cachelist) ? "true" : "false");
+	printAllBlockInList(cachelist);
 	
 }
