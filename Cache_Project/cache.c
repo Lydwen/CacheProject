@@ -16,12 +16,15 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	
 	//ouverture du fichier
 	cache->fp = fopen(fic, "rw+");
+	
+	//sauvegarde des paramètres
 	cache->nblocks = nblocks;
 	cache->nrecords = nrecords;
 	cache->recordsz = recordsz;
 	cache->blocksz = nrecords * recordsz;
 	cache->nderef = nderef;
 	
+	//allocation du cache_instrument + initialisation
 	struct Cache_Instrument *instr = malloc(sizeof(struct Cache_Instrument));
 	instr->n_reads = 0;
 	instr->n_writes = 0;
@@ -31,7 +34,7 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	instr->n_deref = 0;
 	cache->instrument = *instr;
 	
-	
+	//allocation des headers
     struct Cache_Block_Header *headers = malloc(nblocks * sizeof(struct Cache_Block_Header));
 	
 	int block;
@@ -68,9 +71,10 @@ Cache_Error Cache_Close(struct Cache *pcache) {
 //! Synchronisation du cache.
 Cache_Error Cache_Sync(struct Cache *pcache) {
 	unsigned int i;
-	struct Cache_Block_Header curr = pcache->headers[0];
+	struct Cache_Block_Header curr;
 
 	for (i = 0 ; i < pcache->nblocks ; i++){
+		curr = pcache->headers[i];
 		//si le bit M est à 1
 		if((curr.flags & MODIF) > 0){
 			//on met le bit M à 0 sans changer les autres
@@ -80,6 +84,7 @@ Cache_Error Cache_Sync(struct Cache *pcache) {
 			if(fseek(pcache->fp, daddr, SEEK_SET)!=0) return CACHE_KO;
 			if(fputs(curr.data, pcache->fp) == EOF) return CACHE_KO;
 		}
+		
 	}
 	return CACHE_OK;
 }
