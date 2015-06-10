@@ -8,7 +8,7 @@
 struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
                            size_t recordsz, unsigned nderef) {
 
-
+	printf("début\n");
 	struct Cache *cache = malloc(sizeof(struct Cache));
 	cache->file = malloc(strlen(fic) * sizeof(char));
 	strcpy(cache->file, fic);
@@ -28,12 +28,14 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	instr->n_deref = 0;
 	cache->instrument = *instr;
 	
+	
     struct Cache_Block_Header *headers = malloc(nblocks * sizeof(struct Cache_Block_Header));
+	
 	int block;
 	for(block = 0; block < nblocks;block++){
-		cache->headers[block].data = malloc(recordsz * nrecords);
-		cache->headers[block].ibcache = block;
-		cache->headers[block].flags &= 0x0;
+		headers[block].data = malloc(recordsz * nrecords);
+		headers[block].ibcache = block;
+		headers[block].flags &= 0x0;
 	}
     cache->headers = headers;
     
