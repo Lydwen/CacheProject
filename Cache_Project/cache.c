@@ -80,8 +80,8 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 		if (b[i].ibfile == ibfile) { //On a trouve un bloc contenant le bon ibfile,
 			if ((b[i].flags % 2) == 1 ) { //on regarde si le bit V est a 1 
 				// onc on le copie dans le buffer pointe par precord
-				int a = ADDR(pcache,irfile,&b[i]);
-				memcpy(precord, (void*)b[i].data+a,pcache->recordsz);
+				void *a = ADDR(pcache,irfile,&b[i]);
+				memcpy(precord, a,pcache->recordsz);
 				//maj des informations 
 				pcache->instrument.n_reads++;
 				pcache->instrument.n_hits++;
@@ -124,7 +124,7 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 		if (b[i].ibfile == ibfile) { //On a trouve un bloc contenant le bon ibfile,
 			if ((b[i].flags % 2) == 1 ) { //on regarde si le bit V est a 1 
 				// onc on copie les donnees de precord dans le bloc
-				int a = ADDR(pcache,irfile,&b[i]);
+				void *a = ADDR(pcache,irfile,&b[i]);
 				memcpy(a,precord,pcache->recordsz);
 				//maj des informations 
 				b[i].flags |= MODIF;
