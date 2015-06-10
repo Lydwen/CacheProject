@@ -15,7 +15,7 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	cache->nrecords = nrecords;
 	cache->recordsz = recordsz;
 	cache->blocksz = nrecords * recordsz;
-	cache->nderef = NSYNC;
+	cache->nderef = nderef;
 	
 	struct Cache_Instrument *instr = malloc(sizeof(struct Cache_Instrument));
 	instr->n_reads = 0;
@@ -27,16 +27,29 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	cache->instrument = *instr;
 	
     struct Cache_Block_Header *headers = malloc(nblocks * sizeof(struct Cache_Block_Header));
+	int block;
+	for(block = 0; block < nblocks;block++){
+		cache->headers[block].data = malloc(recordsz * nrecords);
+		cache->headers[block].ibcache = block;
+		cache->headers[block].flags &= 0x0;
+	}
     cache->headers = headers;
     
     cache->pfree= &headers[0];
     cache->pstrategy = Strategy_Create(cache);
+	
 	return cache;
 }
 
 //! Fermeture (destruction) du cache.
 Cache_Error Cache_Close(struct Cache *pcache) {
     Strategy_Close(pcache);
+    
+    int block;
+    for(block = 0; block < pcache->nblocks; block++){
+		free(pcache->headers[block].data);
+	}
+	
 	free(pcache->headers);
 	free(&(pcache->instrument));
 	if(fclose(pcache->fp) != 0) return CACHE_KO;
@@ -47,7 +60,22 @@ Cache_Error Cache_Close(struct Cache *pcache) {
 
 //! Synchronisation du cache.
 Cache_Error Cache_Sync(struct Cache *pcache) {
-	return CACHE_KO;
+	unsigned int i;
+	struct Cache_Block_Header curr = pcache->headers[0];
+
+	for (i = 0 ; i < pcache->nblocks ; i++){
+		//si le bit M est à 1
+		if((curr.flags & MODIF) > 0){
+			//on met le bit M à 0 sans changer les autres
+			curr.flags &= ~MODIF;
+			//puis on écrit sur le disque
+			int daddr = DADDR(pcache, curr.ibfile);
+			if(fseek(pcache->fp, daddr, SEEK_SET)!=0) return CACHE_KO;
+			fwrite(curr.data, pcache->recordsz, pcache->nrecords, pcache->fp);
+		}
+	}
+	
+	return CACHE_OK;
 }
 
 //! Invalidation du cache.
