@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "low_cache.h"
-#include "strategy.h"
 #include "cache.h"
+#include "strategy.h"
 #include <string.h>
 
 
@@ -10,8 +10,31 @@
 //! Création du cache.
 struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
                            size_t recordsz, unsigned nderef) {
-
-	return NULL;
+	struct Cache *cache = malloc(sizeof(struct Cache));
+	cache->file = malloc(strlen(fic) * sizeof(char));
+	strcpy(cache->file, fic);
+	cache->fp = fopen(fic, "rw+");
+	cache->nblocks = nblocks;
+	cache->nrecords = nrecords;
+	cache->recordsz = recordsz;
+	cache->blocksz = nrecords * recordsz;
+	cache->nderef = NSYNC;
+	
+	struct Cache_Instrument *instr = malloc(sizeof(struct Cache_Instrument));
+	instr->n_reads = 0;
+	instr->n_writes = 0;
+	instr->n_hits = 0;
+	instr->n_syncs = 0;
+	instr->n_writes = 0;
+	instr->n_deref = 0;
+	cache->instrument = *instr;
+	
+    struct Cache_Block_Header *headers = malloc(nblocks * sizeof(struct Cache_Block_Header));
+    cache->headers = headers;
+    
+    cache->pfree= &headers[0];
+    cache->pstrategy = Strategy_Create(cache);
+	return cache;
 }
 
 //! Fermeture (destruction) du cache.
@@ -21,7 +44,7 @@ Cache_Error Cache_Close(struct Cache *pcache) {
 
 //! Synchronisation du cache.
 Cache_Error Cache_Sync(struct Cache *pcache) {
-	return CACHE_OK;
+	return CACHE_KO;
 }
 
 //! Invalidation du cache.
@@ -73,17 +96,14 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	block->flags = VALID;
 	block->ibfile = ibfile;
 	
-	int da = DADRR(pcache,ibfile); ///calcul de l'adresse du bloc dans le fichier
-	memcpy(block->data, p->fp+da,pcache->blocksz);  //copie des donnees d'un bloc entier depuis le fichier vers le cache
+	int da = DADDR(pcache,ibfile); ///calcul de l'adresse du bloc dans le fichier
+	memcpy(block->data, pcache->fp+da,pcache->blocksz);  //copie des donnees d'un bloc entier depuis le fichier vers le cache
 	
 	void *a = ADDR(pcache,irfile,block); //calcul de l'adresse de l'enregistrement dans le cache
 	memcpy(precord,a,pcache->recordsz);  //copie de l'enregistrement depuis le cache vers le buffer
 	pcache->instrument.n_reads++;
 	Strategy_Read(pcache,block);
 	return CACHE_OK;
-	
-
-	
 }
 
 //! Écriture (à travers le cache).
@@ -120,7 +140,7 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	block->flags = VALID | MODIF;
 	block->ibfile = ibfile;
 	
-	int da = DADRR(pcache,ibfile);
+	int da = DADDR(pcache,ibfile);
 	memcpy(block->data,pcache->fp+da ,pcache->blocksz); //copie des donnees d'un bloc entier depuis le fichier vers le cache
 	
 	void *a = ADDR(pcache,irfile,block);
@@ -128,13 +148,11 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	pcache->instrument.n_writes++;
 	Strategy_Write(pcache,block);
 	return CACHE_OK;
-	
-
-	
+}
 
 
 //! Résultat de l'instrumentation.
 struct Cache_Instrument *Cache_Get_Instrument(struct Cache *pcache) {
-	return NULL;
+	return &(pcache->instrument);
 }
 
