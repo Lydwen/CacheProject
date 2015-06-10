@@ -43,6 +43,7 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
     //on met la structure de donnée de pstrategy
     cache->pstrategy = Strategy_Create(cache);
 	
+
 	return cache;
 }
 
@@ -109,7 +110,8 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	if (precord == NULL )
 		return CACHE_KO;
 
-	
+	if ((pcache->instrument.n_reads+pcache->instrument.n_writes) %NSYNC == 0)
+		Cache_Sync(pcache);
 
 	//On calcule la position du bloc dans le fichier
 	 int ibfile = irfile/pcache->blocksz;
@@ -156,6 +158,9 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	if (precord == NULL )
 		return CACHE_KO;
 
+	
+	if ((pcache->instrument.n_reads+pcache->instrument.n_writes) %NSYNC == 0)
+		Cache_Sync(pcache);
 	
 	//On calcule la position du bloc dans le fichier
 	 int ibfile = irfile/pcache->blocksz;
