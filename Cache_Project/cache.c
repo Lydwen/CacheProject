@@ -7,6 +7,8 @@
 //! Création du cache.
 struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
                            size_t recordsz, unsigned nderef) {
+
+
 	struct Cache *cache = malloc(sizeof(struct Cache));
 	cache->file = malloc(strlen(fic) * sizeof(char));
 	strcpy(cache->file, fic);
@@ -80,15 +82,16 @@ Cache_Error Cache_Sync(struct Cache *pcache) {
 
 //! Invalidation du cache.
 Cache_Error Cache_Invalidate(struct Cache *pcache) {
+	
 	unsigned int i;
-	struct Cache_Block_Header *curr = pcache->headers;
+	
 
-	for (i = 0 ; i < pcache->nblocks ; i++){
+	for (i = 0 ; i < pcache->nblocks ; i++)
 		//On met a 0 le bit V , on ne touche pas aux autres (M et R)
-		curr->flags = curr->flags & 0x6 ;
-		//On passe au header suivant
-		curr++;
-	}
+		pcache->headers[i].flags &= 0x6 ;
+	//Le premier bloc libre est desormais le premier bloc du cache
+	pcache->pfree = &(pcache->headers[0]);
+	Strategy_Invalidate(pcache);
 
 	return CACHE_OK;
 }
@@ -99,6 +102,7 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 		return CACHE_KO;
 
 	
+
 	//On calcule la position du bloc dans le fichier
 	 int ibfile = irfile/pcache->blocksz;
 
