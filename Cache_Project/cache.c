@@ -29,9 +29,10 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	cache->instrument = *instr;
 	
     struct Cache_Block_Header *headers = malloc(nblocks * sizeof(struct Cache_Block_Header));
+	
 	int block;
 	for(block = 0; block < nblocks;block++){
-		cache->headers[block].data = malloc(recordsz * nrecords);
+		cache->headers[block].data = malloc(recordsz * nrecords * sizeof(char));
 		cache->headers[block].ibcache = block;
 		cache->headers[block].flags &= 0x0;
 	}
