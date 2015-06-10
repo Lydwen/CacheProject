@@ -4,9 +4,6 @@
 #include "strategy.h"
 #include <string.h>
 
-
-
-
 //! Création du cache.
 struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
                            size_t recordsz, unsigned nderef) {
@@ -39,6 +36,12 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 
 //! Fermeture (destruction) du cache.
 Cache_Error Cache_Close(struct Cache *pcache) {
+    Strategy_Close(pcache);
+	free(pcache->headers);
+	free(&(pcache->instrument));
+	if(fclose(pcache->fp) != 0) return CACHE_KO;
+	free(pcache->file);
+	free(pcache);
 	return CACHE_OK;
 }
 
