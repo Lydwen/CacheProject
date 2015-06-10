@@ -128,6 +128,7 @@ void Cache_List_Move_To_Begin(struct Cache_List *list, struct Cache_Block_Header
 	}
 }
 
+/*! Pour le test, afficher toutes les cachelist */
 void printAllBlockInList(const struct Cache_List *cachelist)
 {
 	assert(cachelist != NULL);
