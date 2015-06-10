@@ -24,15 +24,7 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	cache->blocksz = nrecords * recordsz;
 	cache->nderef = nderef;
 	
-	//allocation du cache_instrument + initialisation
-	struct Cache_Instrument *instr = malloc(sizeof(struct Cache_Instrument));
-	instr->n_reads = 0;
-	instr->n_writes = 0;
-	instr->n_hits = 0;
-	instr->n_syncs = 0;
-	instr->n_writes = 0;
-	instr->n_deref = 0;
-	cache->instrument = *instr;
+	Cache_Get_Instrument(cache);
 	
 	//allocation des headers
     struct Cache_Block_Header *headers = malloc(nblocks * sizeof(struct Cache_Block_Header));
@@ -45,7 +37,10 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	}
     cache->headers = headers;
     
+    //pfree est le premier header
     cache->pfree= &headers[0];
+    
+    //on met la structure de donnée de pstrategy
     cache->pstrategy = Strategy_Create(cache);
 	
 	return cache;
@@ -53,17 +48,22 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 
 //! Fermeture (destruction) du cache.
 Cache_Error Cache_Close(struct Cache *pcache) {
+    //on désalloue la structure de donnée liée à la stratégie
     Strategy_Close(pcache);
     
     int block;
+    //on désalloue chaque bloc du cache
     for(block = 0; block < pcache->nblocks; block++){
 		free(pcache->headers[block].data);
 	}
 	
+	//on désalloue les headers
 	free(pcache->headers);
-	free(&(pcache->instrument));
+	//on ferme le fichier
 	if(fclose(pcache->fp) != 0) return CACHE_KO;
+	//on désalmloue le nom du fichier
 	free(pcache->file);
+	//on désalloue le cache en lui-même
 	free(pcache);
 	return CACHE_OK;
 }
@@ -73,6 +73,8 @@ Cache_Error Cache_Sync(struct Cache *pcache) {
 	unsigned int i;
 	struct Cache_Block_Header curr;
 
+	pcache->instrument.n_syncs++;
+	
 	for (i = 0 ; i < pcache->nblocks ; i++){
 		curr = pcache->headers[i];
 		//si le bit M est à 1
@@ -138,8 +140,10 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	block->ibfile = ibfile;
 	
 	int da = DADDR(pcache,ibfile); ///calcul de l'adresse du bloc dans le fichier
-	memcpy(block->data, pcache->fp+da,pcache->blocksz);  //copie des donnees d'un bloc entier depuis le fichier vers le cache
-	
+	//memcpy(block->data, pcache->fp+da,pcache->blocksz);  //copie des donnees d'un bloc entier depuis le fichier vers le cache
+	if(fseek(pcache->fp, da, SEEK_SET)!=0) return CACHE_KO;
+	fgets(block->data, pcache->blocksz,pcache->fp);
+		
 	void *a = ADDR(pcache,irfile,block); //calcul de l'adresse de l'enregistrement dans le cache
 	memcpy(precord,a,pcache->recordsz);  //copie de l'enregistrement depuis le cache vers le buffer
 	pcache->instrument.n_reads++;
@@ -182,7 +186,9 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	block->ibfile = ibfile;
 	
 	int da = DADDR(pcache,ibfile);
-	memcpy(block->data,pcache->fp+da ,pcache->blocksz); //copie des donnees d'un bloc entier depuis le fichier vers le cache
+	//memcpy(block->data,pcache->fp+da ,pcache->blocksz); //copie des donnees d'un bloc entier depuis le fichier vers le cache
+	if(fseek(pcache->fp, da, SEEK_SET)!=0) return CACHE_KO;
+	fgets(block->data, pcache->blocksz,pcache->fp);
 	
 	void *a = ADDR(pcache,irfile,block);
 	memcpy(a,precord,pcache->recordsz);  //copie de l'enregistrement depuis le cache vers le buffer
@@ -195,7 +201,8 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 //! Résultat de l'instrumentation.
 struct Cache_Instrument *Cache_Get_Instrument(struct Cache *pcache) {
 	//copie des donnees 
-	struct Cache_Instrument ins = pcache->instrument;
+	struct Cache_Instrument *instrument = malloc(sizeof(struct Cache_Instrument));
+	*instrument = pcache->instrument;
 
 	//Remise a zero de tous les compteurs
 	pcache->instrument.n_reads = 0;
@@ -204,7 +211,6 @@ struct Cache_Instrument *Cache_Get_Instrument(struct Cache *pcache) {
 	pcache->instrument.n_syncs = 0;
 	pcache->instrument.n_deref = 0;
 	
-
-	return &ins;
+	return instrument;
 }
 
