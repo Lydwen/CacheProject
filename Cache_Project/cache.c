@@ -51,15 +51,19 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	struct Cache_Block_Header *b = pcache->headers;
 	unsigned int i;
 	for (i=0; i<pcache->nblocks; i++){
-		if ((b[i].flags % 2) == 1 && b[i].ibfile == ibfile) { //on regarde si le bit V est a 1 et si les ibfiles correspondent
-			//On a trouve un bloc valide contenant le bon ibfile, onc on le copie dans le buffer pointe par precord
-			int a = ADDR(pcache,irfile,&b[i]);
-			memcpy(precord, (void*)b[i].data+a,pcache->recordsz);
-			//maj des informations 
-			pcache->instrument.n_reads++;
-			pcache->instrument.n_hits++;
-			Strategy_Read(pcache,&b[i]);
-			return CACHE_OK;
+		if (b[i].ibfile == ibfile) { //On a trouve un bloc contenant le bon ibfile,
+			if ((b[i].flags % 2) == 1 ) { //on regarde si le bit V est a 1 
+				// onc on le copie dans le buffer pointe par precord
+				int a = ADDR(pcache,irfile,&b[i]);
+				memcpy(precord, (void*)b[i].data+a,pcache->recordsz);
+				//maj des informations 
+				pcache->instrument.n_reads++;
+				pcache->instrument.n_hits++;
+				Strategy_Read(pcache,&b[i]);
+				return CACHE_OK;
+			}
+			//Si bloc non valide alors on sort puisqu'il ne peut y en avoir qu'un avec le bon ibfile
+			break;
 		}
 	}
 
@@ -68,11 +72,12 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	
 	block->flags = VALID;
 	block->ibfile = ibfile;
-	//copie des donnees d'un bloc entier depuis le fichier vers le cache
-	memcpy(block->data, DADRR(pcache,ibfile),pcache->blocksz);
-	//copie de l'enregistrement depuis le cache vers le buffer
-	int a = ADDR(pcache,irfile,block);
-	memcpy(precord,(void*)block->data+a,pcache->recordsz);
+	
+	int da = DADRR(pcache,ibfile); ///calcul de l'adresse du bloc dans le fichier
+	memcpy(block->data, p->fp+da,pcache->blocksz);  //copie des donnees d'un bloc entier depuis le fichier vers le cache
+	
+	void *a = ADDR(pcache,irfile,block); //calcul de l'adresse de l'enregistrement dans le cache
+	memcpy(precord,a,pcache->recordsz);  //copie de l'enregistrement depuis le cache vers le buffer
 	pcache->instrument.n_reads++;
 	Strategy_Read(pcache,block);
 	return CACHE_OK;
@@ -93,16 +98,19 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	struct Cache_Block_Header *b = pcache->headers;
 	unsigned int i;
 	for (i=0; i<pcache->nblocks; i++){
-		if ((b[i].flags % 2) == 1 && b[i].ibfile == ibfile) { //on regarde si le bit V est a 1 et si les ibfiles correspondent
-			//On a trouve un bloc valide contenant le bon ibfile, onc on va copier precord dans le bloc
-			int a = ADDR(pcache,irfile,&b[i]);
-			memcpy((void*)b[i].data+a,precord,pcache->recordsz);
-			//maj des informations 
-			b[i].flags |= MODIF;
-			pcache->instrument.n_writes++;
-			pcache->instrument.n_hits++;
-			Strategy_Write(pcache,&b[i]);
-			return CACHE_OK;
+		if (b[i].ibfile == ibfile) { //On a trouve un bloc contenant le bon ibfile,
+			if ((b[i].flags % 2) == 1 ) { //on regarde si le bit V est a 1 
+				// onc on copie les donnees de precord dans le bloc
+				int a = ADDR(pcache,irfile,&b[i]);
+				memcpy(a,precord,pcache->recordsz);
+				//maj des informations 
+				b[i].flags |= MODIF;
+				pcache->instrument.n_writes++;
+				pcache->instrument.n_hits++;
+				Strategy_Write(pcache,&b[i]);
+				return CACHE_OK;
+			}
+			break;
 		}
 	}
 
@@ -111,11 +119,12 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	
 	block->flags = VALID | MODIF;
 	block->ibfile = ibfile;
-	//copie des donnees d'un bloc entier depuis le fichier vers le cache
-	memcpy(block->data, DADRR(pcache,ibfile),pcache->blocksz);
-	//copie de l'enregistrement depuis le cache vers le buffer
-	int a = ADDR(pcache,irfile,block);
-	memcpy((void*)block->data+a,precord,pcache->recordsz);
+	
+	int da = DADRR(pcache,ibfile);
+	memcpy(block->data,pcache->fp+da ,pcache->blocksz); //copie des donnees d'un bloc entier depuis le fichier vers le cache
+	
+	void *a = ADDR(pcache,irfile,block);
+	memcpy(a,precord,pcache->recordsz);  //copie de l'enregistrement depuis le cache vers le buffer
 	pcache->instrument.n_writes++;
 	Strategy_Write(pcache,block);
 	return CACHE_OK;
