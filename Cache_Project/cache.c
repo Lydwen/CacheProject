@@ -7,11 +7,14 @@
 //! Création du cache.
 struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
                            size_t recordsz, unsigned nderef) {
-
-	printf("début\n");
+	//allocation cache
 	struct Cache *cache = malloc(sizeof(struct Cache));
+	
+	//allocation nom fichier
 	cache->file = malloc(strlen(fic) * sizeof(char));
 	strcpy(cache->file, fic);
+	
+	//ouverture du fichier
 	cache->fp = fopen(fic, "rw+");
 	cache->nblocks = nblocks;
 	cache->nrecords = nrecords;
@@ -75,18 +78,15 @@ Cache_Error Cache_Sync(struct Cache *pcache) {
 			//puis on écrit sur le disque
 			int daddr = DADDR(pcache, curr.ibfile);
 			if(fseek(pcache->fp, daddr, SEEK_SET)!=0) return CACHE_KO;
-			fwrite(curr.data, pcache->recordsz, pcache->nrecords, pcache->fp);
+			if(fputs(curr.data, pcache->fp) == EOF) return CACHE_KO;
 		}
 	}
-	
 	return CACHE_OK;
 }
 
 //! Invalidation du cache.
 Cache_Error Cache_Invalidate(struct Cache *pcache) {
-	
 	unsigned int i;
-	
 
 	for (i = 0 ; i < pcache->nblocks ; i++)
 		//On met a 0 le bit V , on ne touche pas aux autres (M et R)
@@ -94,7 +94,6 @@ Cache_Error Cache_Invalidate(struct Cache *pcache) {
 	//Le premier bloc libre est desormais le premier bloc du cache
 	pcache->pfree = &(pcache->headers[0]);
 	Strategy_Invalidate(pcache);
-
 	return CACHE_OK;
 }
 
