@@ -55,7 +55,7 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 			if ((b[i].flags % 2) == 1 ) { //on regarde si le bit V est a 1 
 				// onc on le copie dans le buffer pointe par precord
 				int a = ADDR(pcache,irfile,&b[i]);
-				memcpy(precord, (void*)b[i].data+a,pcache->recordsz);
+				memcpy(precord, a,pcache->recordsz);
 				//maj des informations 
 				pcache->instrument.n_reads++;
 				pcache->instrument.n_hits++;
