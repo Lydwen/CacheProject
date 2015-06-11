@@ -1,12 +1,59 @@
+/*!
+ * \file RAND_strategy.c
+ *
+ * \brief  Stratégie de remplacement au hasard..
+ * 
+ * \author Jean-Paul Rigault 
+ *
+ * $Id: RAND_strategy.c,v 1.3 2008/03/04 16:52:49 jpr Exp $
+ */
+
+#include <assert.h>
+
 #include "strategy.h"
 #include "low_cache.h"
+#include "random.h"
+#include "time.h"
 
 
-static void refresh_R(struct Cache *pcache);
-static int calc(int r, int m);
+struct Data
+    {
+       	unsigned nAcces;    //le nombre d'acces au cache, au bout duquel le R sera remis a 0
+        
+    };
+
+static void mise_a_zero(struct Cache *pcache)
+{
+	struct Data *d = (struct Data *)(pcache->pstrategy);
+	int i;
+	if(pcache->nderef == 0 || --d->nAcces > 0)
+		return;
+
+	for(i = 0; i < pcache->nblocks; i++)
+	{
+		
+		pcache->headers[i].flags &= 0x4;
+		
+	}
+
+	d->nAcces = pcache->nderef;
+	pcache->instrument.n_deref ++;
 
 
+}
 
+static int calc (int r, int m){
+	if(r >= 1)
+		r = 1;
+	else
+		r = 0;
+	if(m >= 1)
+		m = 1;
+	else
+		m = 0;
+	return r << 1 | m;
+	
+}
 /*!
  * Initialisation de la strategie NUR : . 
  *
@@ -17,11 +64,10 @@ static int calc(int r, int m);
 void *Strategy_Create(struct Cache *pcache) 
 {	
 	//printf("je suis dans Create\n");
-    int *nAcces = malloc(sizeof(int));  // Creation de la structur de donnée
-    
-    nAcces[0] = pcache->nderef;   // Initialisation du nombre d'acces au cache à 0
+    struct Data *d = malloc(sizeof(struct Data));  // Creation de la structur de donnée
+    d->nAcces = pcache->nderef;   // Initialisation du nombre d'acces au cache à 0
 
-    return nAcces;//affectation de la struct dans la struct du cache
+    return d;//affectation de la struct dans la struct du cache
     
 }
 
@@ -44,7 +90,13 @@ void Strategy_Invalidate(struct Cache *pcache)
 {
     //printf("je suis dans Invalidate\n");
     
-    refresh_R(pcache);
+    struct Data *d = (struct Data *)(pcache->pstrategy);
+
+    if (pcache->nderef != 0) 
+    {
+        d->nAcces = 1;
+        mise_a_zero(pcache);
+    }   
 }
 
 /*! 
@@ -57,28 +109,27 @@ struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache)
     int ib;
     int min = 4;
     int tmp;
-    struct Cache_Block_Header *block;
-    struct Cache_Block_Header *block_tmp = NULL;
+    struct Cache_Block_Header *pbh;
+    struct Cache_Block_Header *pbh_tmp = NULL;
 
     /* On cherche d'abord un bloc invalide */
-    if ((block = Get_Free_Block(pcache)) != NULL) 
-    	return block;
+    if ((pbh = Get_Free_Block(pcache)) != NULL) return pbh;
 
     for (ib = 0 ; ib < pcache->nblocks; ib++)
     {
-		block = &pcache->headers[ib];
+		pbh = &pcache->headers[ib];
 		
 		//printf("je suis dans Replace, %d\n", pbh->flags & REFER);
     
-		tmp = calc(block->flags & REFER, block->flags & MODIF);
-		if (tmp == 0) return block; 
+		tmp = calc(pbh->flags & REFER, pbh->flags & MODIF);
+		if (tmp == 0) return pbh; 
 		else if (tmp < min) 
 		{
 		    min = tmp;
-		    block_tmp = block;
+		    pbh_tmp = pbh;
 		}	
     }
-    return block_tmp;    
+    return pbh_tmp;    
     
 }
 
@@ -88,11 +139,9 @@ struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache)
  */
 void Strategy_Read(struct Cache *pcache, struct Cache_Block_Header *pbh) 
 {	
-	int *nAcces  = (int *)(pcache)->pstrategy;
-
-	// Si le compteur de déréférencements est égal à nderef, on réinitialise
-	if((--nAcces[0]) == 0)
-		refresh_R(pcache);
+	//printf("je suis dans Read\n");
+    
+	mise_a_zero(pcache);
 	pbh->flags |= 0x4;
 }  
 
@@ -101,11 +150,9 @@ void Strategy_Read(struct Cache *pcache, struct Cache_Block_Header *pbh)
  */  
 void Strategy_Write(struct Cache *pcache, struct Cache_Block_Header *pbh)
 {
-	int *nAcces  = (int*)(pcache)->pstrategy;
-
-	// Si le compteur de déréférencements est égal à nderef, on réinitialise
-	if((--nAcces[0]) == 0)
-		refresh_R(pcache);
+	//printf("je suis dans Write\n");
+    
+	mise_a_zero(pcache);
 	pbh->flags |= 0x4;
 } 
 
@@ -114,35 +161,3 @@ char *Strategy_Name()
     return "NUR";
 }
 
-
-// methode static
-static void refresh_R(struct Cache *pcache)
-{
-	int *nAcces  = (int *)(pcache)->pstrategy;
-	int i;
-
-	if(pcache->nderef != 0){
-		// On parcourt tous les blocs du cache pour remettre REFER à 0.
-		for (i = 0 ; i < pcache->nblocks ; i++)
-			pcache->headers[i].flags &= ~0x4;
-		// Le compteur est réinitialisé
-		nAcces[0] = pcache->nderef;
-		// On augmente le nombre de déréférencements effectués
-	    	pcache->instrument.n_deref++;
-	}
-
-
-}
-
-static int calc (int r, int m){
-	if(r >= 1)
-		r = 1;
-	else
-		r = 0;
-	if(m >= 1)
-		m = 1;
-	else
-		m = 0;
-	return r << 1 | m;
-	
-}
