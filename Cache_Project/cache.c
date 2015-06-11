@@ -160,7 +160,7 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	if (precord == NULL )
 		return CACHE_KO;
 
-	if (pcache->instrument.n_reads+pcache->instrument.n_writes %NSYNC == 0)
+	if ((pcache->instrument.n_reads+pcache->instrument.n_writes) %NSYNC == 0)
 		Cache_Sync(pcache);
 	
 	//On calcule la position du bloc dans le fichier
