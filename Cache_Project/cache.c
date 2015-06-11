@@ -138,7 +138,9 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	//On n'a pas trouve de bloc qui contienne l'enregistrement voulu, on cherche donc un bloc libre
 	struct Cache_Block_Header *block = (struct Cache_Block_Header *) Strategy_Replace_Block(pcache);
 	
-	block->flags = VALID;
+	block->flags |= VALID;
+	block->flags &= ~MODIF;
+
 	block->ibfile = ibfile;
 	
 	int da = DADDR(pcache,ibfile); ///calcul de l'adresse du bloc dans le fichier
@@ -158,8 +160,7 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	if (precord == NULL )
 		return CACHE_KO;
 
-	
-	if ((pcache->instrument.n_reads+pcache->instrument.n_writes) %NSYNC == 0)
+	if (pcache->instrument.n_reads+pcache->instrument.n_writes %NSYNC == 0)
 		Cache_Sync(pcache);
 	
 	//On calcule la position du bloc dans le fichier
@@ -187,7 +188,8 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	//On n'a pas trouve de bloc qui contienne l'enregistrement voulu, on cherche donc un bloc libre
 	struct Cache_Block_Header *block = (struct Cache_Block_Header *) Strategy_Replace_Block(pcache);
 	
-	block->flags = VALID | MODIF;
+	block->flags |= VALID ;
+	block->flags &= ~MODIF;
 	block->ibfile = ibfile;
 	
 	int da = DADDR(pcache,ibfile);
