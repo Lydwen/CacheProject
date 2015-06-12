@@ -140,7 +140,7 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	void *a = ADDR(pcache,irfile,header);
 	memcpy(precord,a,pcache->recordsz); //copie de l'enregistrement depuis le cache vers le buffer
 	
-	pcache->instrument.n_writes++;
+	pcache->instrument.n_reads++;
 	
 	//tous les NSYNC accès on sync
 	if (pcache->instrument.n_reads+pcache->instrument.n_writes % NSYNC == 0)
