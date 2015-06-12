@@ -134,16 +134,13 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 		header = Recup_Bloc(pcache, ibfile);
 	}
 	
-	// enregistrement fait
-	header->flags |= MODIF;
-
 	void *a = ADDR(pcache,irfile,header);
 	memcpy(precord,a,pcache->recordsz); //copie de l'enregistrement depuis le cache vers le buffer
 	
 	pcache->instrument.n_reads++;
 	
 	//tous les NSYNC accès on sync
-	if (pcache->instrument.n_reads+pcache->instrument.n_writes % NSYNC == 0)
+	if ((pcache->instrument.n_reads+pcache->instrument.n_writes) % NSYNC == 0)
 		Cache_Sync(pcache);
 	
 	//on appelle Strategy_Read
@@ -188,7 +185,7 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	pcache->instrument.n_writes++;
 	
 	//tous les NSYNC accès on sync
-	if (pcache->instrument.n_reads+pcache->instrument.n_writes % NSYNC == 0)
+	if ((pcache->instrument.n_reads+pcache->instrument.n_writes) % NSYNC == 0)
 		Cache_Sync(pcache);
 	
 	Strategy_Write(pcache,header);
