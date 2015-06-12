@@ -4,6 +4,8 @@
 #include "strategy.h"
 #include <string.h>
 
+struct Cache_Block_Header *Recup_Bloc(struct Cache *pcache, int ibfile);
+
 //! Création du cache.
 struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
                            size_t recordsz, unsigned nderef) {
@@ -15,7 +17,7 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 	strcpy(cache->file, fic);
 	
 	//ouverture du fichier
-	cache->fp = fopen(fic, "rw+");
+	cache->fp = fopen(fic, "w+");
 	
 	//sauvegarde des paramètres
 	cache->nblocks = nblocks;
@@ -48,7 +50,9 @@ struct Cache *Cache_Create(const char *fic, unsigned nblocks, unsigned nrecords,
 }
 
 //! Fermeture (destruction) du cache.
-Cache_Error Cache_Close(struct Cache *pcache) {
+Cache_Error Cache_Close(struct Cache *pcache) 
+{
+	Cache_Sync(pcache);
     //on désalloue la structure de donnée liée à la stratégie
     Strategy_Close(pcache);
     
@@ -98,7 +102,7 @@ Cache_Error Cache_Invalidate(struct Cache *pcache) {
 
 	for (i = 0 ; i < pcache->nblocks ; i++)
 		//On met a 0 le bit V , on ne touche pas aux autres (M et R)
-		pcache->headers[i].flags &= 0x6 ;
+		pcache->headers[i].flags &= ~VALID ;
 	//Le premier bloc libre est desormais le premier bloc du cache
 	pcache->pfree = &(pcache->headers[0]);
 	Strategy_Invalidate(pcache);
@@ -110,48 +114,41 @@ Cache_Error Cache_Read(struct Cache *pcache, int irfile, void *precord) {
 	if (precord == NULL )
 		return CACHE_KO;
 
-	if ((pcache->instrument.n_reads+pcache->instrument.n_writes) %NSYNC == 0)
-		Cache_Sync(pcache);
-
+	struct Cache_Block_Header *header = NULL;
 	//On calcule la position du bloc dans le fichier
-	 int ibfile = irfile/pcache->blocksz;
+	 int ibfile = irfile/pcache->nrecords;
 
 	struct Cache_Block_Header *b = pcache->headers;
+	
 	unsigned int i;
 	for (i=0; i<pcache->nblocks; i++){
 		if (b[i].ibfile == ibfile) { //On a trouve un bloc contenant le bon ibfile,
-			if ((b[i].flags % 2) == 1 ) { //on regarde si le bit V est a 1 
-				// onc on le copie dans le buffer pointe par precord
-				void *a = ADDR(pcache,irfile,&b[i]);
-				memcpy(precord, a,pcache->recordsz);
-				//maj des informations 
-				pcache->instrument.n_reads++;
-				pcache->instrument.n_hits++;
-				Strategy_Read(pcache,&b[i]);
-				return CACHE_OK;
+			if ((b[i].flags & VALID) > 0 ) { //on regarde si le bit V est a 1 
+				header = &b[i];
+				pcache->instrument.n_hits++; //dans ce cas on a "hit"
 			}
-			//Si bloc non valide alors on sort puisqu'il ne peut y en avoir qu'un avec le bon ibfile
 			break;
 		}
 	}
-
-	//On n'a pas trouve de bloc qui contienne l'enregistrement voulu, on cherche donc un bloc libre
-	struct Cache_Block_Header *block = (struct Cache_Block_Header *) Strategy_Replace_Block(pcache);
+	if(header == NULL){
+		header = Recup_Bloc(pcache, ibfile);
+	}
 	
-	block->flags |= VALID;
-	block->flags &= ~MODIF;
+	// enregistrement fait
+	header->flags |= MODIF;
 
-	block->ibfile = ibfile;
+	void *a = ADDR(pcache,irfile,header);
+	memcpy(precord,a,pcache->recordsz); //copie de l'enregistrement depuis le cache vers le buffer
 	
-	int da = DADDR(pcache,ibfile); ///calcul de l'adresse du bloc dans le fichier
-	//memcpy(block->data, pcache->fp+da,pcache->blocksz);  //copie des donnees d'un bloc entier depuis le fichier vers le cache
-	if(fseek(pcache->fp, da, SEEK_SET)!=0) return CACHE_KO;
-	fgets(block->data, pcache->blocksz,pcache->fp);
-		
-	void *a = ADDR(pcache,irfile,block); //calcul de l'adresse de l'enregistrement dans le cache
-	memcpy(precord,a,pcache->recordsz);  //copie de l'enregistrement depuis le cache vers le buffer
-	pcache->instrument.n_reads++;
-	Strategy_Read(pcache,block);
+	pcache->instrument.n_writes++;
+	
+	//tous les NSYNC accès on sync
+	if (pcache->instrument.n_reads+pcache->instrument.n_writes % NSYNC == 0)
+		Cache_Sync(pcache);
+	
+	//on appelle Strategy_Read
+	Strategy_Read(pcache,header);
+	
 	return CACHE_OK;
 }
 
@@ -160,47 +157,40 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 	if (precord == NULL )
 		return CACHE_KO;
 
-	if (pcache->instrument.n_reads+pcache->instrument.n_writes %NSYNC == 0)
-		Cache_Sync(pcache);
-	
+	struct Cache_Block_Header *header = NULL;
 	//On calcule la position du bloc dans le fichier
-	 int ibfile = irfile/pcache->blocksz;
+	 int ibfile = irfile/pcache->nrecords;
 
 	struct Cache_Block_Header *b = pcache->headers;
+	
 	unsigned int i;
 	for (i=0; i<pcache->nblocks; i++){
 		if (b[i].ibfile == ibfile) { //On a trouve un bloc contenant le bon ibfile,
-			if ((b[i].flags % 2) == 1 ) { //on regarde si le bit V est a 1 
-				// onc on copie les donnees de precord dans le bloc
-				void *a = ADDR(pcache,irfile,&b[i]);
-				memcpy(a,precord,pcache->recordsz);
-				//maj des informations 
-				b[i].flags |= MODIF;
-				pcache->instrument.n_writes++;
-				pcache->instrument.n_hits++;
-				Strategy_Write(pcache,&b[i]);
-				return CACHE_OK;
+			if ((b[i].flags & VALID) > 0 ) { //on regarde si le bit V est a 1 
+				header = &b[i];
+				pcache->instrument.n_hits++; //dans ce cas on a "hit"
 			}
 			break;
 		}
 	}
+	if(header == NULL){
+		header = Recup_Bloc(pcache, ibfile);
+	}
+	
+	// enregistrement fait
+	header->flags |= MODIF;
 
-	//On n'a pas trouve de bloc qui contienne l'enregistrement voulu, on cherche donc un bloc libre
-	struct Cache_Block_Header *block = (struct Cache_Block_Header *) Strategy_Replace_Block(pcache);
+	void *a = ADDR(pcache,irfile,header);
+	memcpy(a,precord,pcache->recordsz); //copie de l'enregistrement depuis le cache vers le buffer
 	
-	block->flags |= VALID ;
-	block->flags &= ~MODIF;
-	block->ibfile = ibfile;
-	
-	int da = DADDR(pcache,ibfile);
-	//memcpy(block->data,pcache->fp+da ,pcache->blocksz); //copie des donnees d'un bloc entier depuis le fichier vers le cache
-	if(fseek(pcache->fp, da, SEEK_SET)!=0) return CACHE_KO;
-	fgets(block->data, pcache->blocksz,pcache->fp);
-	
-	void *a = ADDR(pcache,irfile,block);
-	memcpy(a,precord,pcache->recordsz);  //copie de l'enregistrement depuis le cache vers le buffer
 	pcache->instrument.n_writes++;
-	Strategy_Write(pcache,block);
+	
+	//tous les NSYNC accès on sync
+	if (pcache->instrument.n_reads+pcache->instrument.n_writes % NSYNC == 0)
+		Cache_Sync(pcache);
+	
+	Strategy_Write(pcache,header);
+	
 	return CACHE_OK;
 }
 
@@ -221,3 +211,28 @@ struct Cache_Instrument *Cache_Get_Instrument(struct Cache *pcache) {
 	return instrument;
 }
 
+struct Cache_Block_Header *Recup_Bloc(struct Cache *pcache, int ibfile){
+	//On n'a pas trouve de bloc qui contienne l'enregistrement voulu, on cherche donc un bloc libre
+	struct Cache_Block_Header *header = Strategy_Replace_Block(pcache);
+	
+	pcache->pfree = Get_Free_Block(pcache);
+	
+	// Si le bloc a été modifié, il est réécrit sur le disque
+	if((header->flags & MODIF) > 0){
+		if(fseek(pcache->fp, DADDR(pcache, header->ibfile), SEEK_SET) != 0)
+			return CACHE_KO;
+		if(fputs(header->data, pcache->fp) == EOF)
+			return CACHE_KO;
+	}
+	
+	//le bloc est maintenant valide et non modifié
+	header->flags |= VALID ;
+	header->flags &= ~MODIF;
+	//on lui met le nouveau ibfile
+	header->ibfile = ibfile;
+
+	if(fseek(pcache->fp, DADDR(pcache,ibfile), SEEK_SET)!=0)
+		return CACHE_KO;
+	fgets(header->data, pcache->blocksz,pcache->fp);
+	return header;
+}
