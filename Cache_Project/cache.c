@@ -158,6 +158,7 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 		return CACHE_KO;
 
 	struct Cache_Block_Header *header = NULL;
+
 	//On calcule la position du bloc dans le fichier
 	 int ibfile = irfile/pcache->nrecords;
 

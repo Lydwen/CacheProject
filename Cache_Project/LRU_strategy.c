@@ -2,8 +2,7 @@
 
 #include "strategy.h"
 #include "low_cache.h"
-#include "random.h"
-#include "time.h"
+#include "cache_list.h"
 
 
 
