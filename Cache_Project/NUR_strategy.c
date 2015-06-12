@@ -36,10 +36,6 @@ void Strategy_Close(struct Cache *pcache)
 
 }
 
-
-/*!
- * RAND : Rien à faire ici.
- */
 void Strategy_Invalidate(struct Cache *pcache)
 {
     //printf("je suis dans Invalidate\n");
@@ -47,9 +43,7 @@ void Strategy_Invalidate(struct Cache *pcache)
     refresh_R(pcache);
 }
 
-/*! 
- * RAND : On prend le premier bloc invalide. S'il n'y en a plus, on prend un bloc au hasard.
- */
+
 struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache) 
 {
     //printf("je suis dans Replace\n");
@@ -83,9 +77,6 @@ struct Cache_Block_Header *Strategy_Replace_Block(struct Cache *pcache)
 }
 
 
-/*!
- * RAND : Rien à faire ici.
- */
 void Strategy_Read(struct Cache *pcache, struct Cache_Block_Header *pbh) 
 {	
 	int *nAcces  = (int *)(pcache)->pstrategy;
@@ -96,9 +87,6 @@ void Strategy_Read(struct Cache *pcache, struct Cache_Block_Header *pbh)
 	pbh->flags |= 0x4;
 }  
 
-/*!
- * RAND : Rien à faire ici.
- */  
 void Strategy_Write(struct Cache *pcache, struct Cache_Block_Header *pbh)
 {
 	int *nAcces  = (int*)(pcache)->pstrategy;
@@ -115,7 +103,9 @@ char *Strategy_Name()
 }
 
 
-// methode static
+/*
+		++++ methode static ++++
+*/
 static void refresh_R(struct Cache *pcache)
 {
 	int *nAcces  = (int *)(pcache)->pstrategy;
