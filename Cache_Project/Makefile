@@ -20,7 +20,7 @@ PROGS = tst_Cache_RAND tst_Cache_FIFO tst_Cache_LRU tst_Cache_NUR
 # Mettre ici les *.o de la bibliothèque que vous avez réimplémentés
 # (cache.o low_cache.o cache_list.o)
 
-USRFILES = cache.o low_cahe.o cache_list.o
+USRFILES =  cache.o low_cache.o cache_list.o
 
 #------------------------------------------------------------------
 # Commandes
@@ -53,15 +53,15 @@ tst_Cache_% : tst_Cache.o %_strategy.o $(USRFILES)
 # Exécutables : décommentés les exécutables des stratégies que vous avez implémentées
 # N'enlevez pas depend !
 
-all : depend tst_Cache_RAND tst_Cache_NUR tst_Cache_FIFO tst_Cache_LRU
+all : depend tst_Cache_RAND tst_Cache_FIFO tst_Cache_LRU tst_Cache_NUR
 
 # Nettoyage 
 clean : all
-	-rm -f *.o *.out
+	-rm -f *.o *.out foo
 
 # Nettoyage complet
 full_clean :
-	-rm -f *.o *.out
+	-rm -f *.o *.out foo
 	-rm -f tst_Cache_RAND tst_Cache_FIFO tst_Cache_LRU tst_Cache_NUR
 	-rm depend.out
 	-rm -rf Plots

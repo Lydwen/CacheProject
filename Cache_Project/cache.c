@@ -101,7 +101,7 @@ Cache_Error Cache_Invalidate(struct Cache *pcache) {
 	unsigned int i;
 
 	for (i = 0 ; i < pcache->nblocks ; i++)
-		//On met a 0 le bit V , on ne touche pas aux autres (M et R)
+		//On met a 0 le bit V , on ne touche pas aux autres bits
 		pcache->headers[i].flags &= ~VALID ;
 	//Le premier bloc libre est desormais le premier bloc du cache
 	pcache->pfree = &(pcache->headers[0]);
@@ -174,6 +174,7 @@ Cache_Error Cache_Write(struct Cache *pcache, int irfile, const void *precord) {
 			break;
 		}
 	}
+	
 	if(header == NULL){
 		header = Recup_Bloc(pcache, ibfile);
 	}
